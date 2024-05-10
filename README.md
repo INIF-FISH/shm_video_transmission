@@ -8,7 +8,9 @@
 
 【!】大小固定方式为RESIZE
 
-【!】同一Channel的width、height应保持一致，否则程序将报错退出
+【!】同一Channel允许存在一个发送者和多个接收者
+
+【!】同一Channel下如果发送者关闭，所有接收者需要重新打开
 
 ## 使用
 
@@ -38,5 +40,5 @@ make
 ### 接收者
 
 ```
-./receiver <channelName> <width> <height>
+./receiver <channelName>
 ```

@@ -58,6 +58,7 @@
         "bitset": "cpp",
         "optional": "cpp",
         "typeindex": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "*.ipp": "cpp"
     }
 }

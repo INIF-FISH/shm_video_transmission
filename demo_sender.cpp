@@ -1,4 +1,5 @@
 #include "./SHM_Video_Transmission/shm_video_transmission.h"
+#include <thread>
 
 int main(int argc, char *argv[])
 {
@@ -26,6 +27,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    int wait_nanoseconds = std::round(1000000000.f / fps);
+
     cv::Mat frame;
     while (true)
     {
@@ -40,6 +44,9 @@ int main(int argc, char *argv[])
 
         // Send the frame
         sender.send(frame);
+
+        // wait for a while
+        std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
     }
 
     return 0;

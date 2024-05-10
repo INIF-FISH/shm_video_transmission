@@ -3,19 +3,17 @@
 int main(int argc, char *argv[])
 {
     // Check if all required arguments are provided
-    if (argc < 4)
+    if (argc < 2)
     {
-        std::cerr << "Usage: " << argv[0] << " <channelName> <width> <height>\n";
+        std::cerr << "Usage: " << argv[0] << " <channelName>\n";
         return 1;
     }
 
     // Extract command line arguments
     std::string channelName = argv[1];
-    int width = std::stoi(argv[2]);
-    int height = std::stoi(argv[3]);
 
     // Create a VideoReceiver object
-    shm_video_trans::VideoReceiver receiver(channelName, width, height);
+    shm_video_trans::VideoReceiver receiver(channelName);
 
     // Create a window to display the received video
     cv::namedWindow("Received Video", cv::WINDOW_AUTOSIZE);
@@ -29,13 +27,14 @@ int main(int argc, char *argv[])
     int frame_count = 0;
     unsigned long transmission_latency = 0;
     unsigned long avg_transmission_latency = 0;
+    cv::namedWindow("Received Video",cv::WindowFlags::WINDOW_NORMAL);
 
     while (true)
     {
         // Receive a frame
         if (receiver.receive(receivedFrame))
         {
-            auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.meta.write_time);
+            auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
             frame_count++;
             transmission_latency += duration.count();
             end_time = std::chrono::high_resolution_clock::now();
