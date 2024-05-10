@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         if (receiver.receive(receivedFrame))
         {
             auto transmission_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
-            auto system_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
+            auto system_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.time_stamp);
             frame_count++;
             transmission_latency += transmission_duration.count();
             system_latency += system_duration.count();
