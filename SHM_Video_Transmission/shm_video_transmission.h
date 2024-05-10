@@ -6,7 +6,6 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
-#include <boost/interprocess/sync/upgradable_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
 #include <chrono>
 
@@ -99,12 +98,23 @@ namespace shm_video_trans
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            upgradable_lock<interprocess_upgradable_mutex> lock(metadata->mutex);
+            std::chrono::high_resolution_clock::time_point wait_start_time = std::chrono::high_resolution_clock::now();
+            std::chrono::high_resolution_clock::time_point wait_end_time;
+            while (!metadata->mutex.try_lock_upgradable())
+            {
+                wait_end_time = std::chrono::high_resolution_clock::now();
+                if (std::chrono::duration_cast<std::chrono::seconds>(wait_end_time - wait_start_time).count() > 1)
+                {
+                    FrameMetadata *metadata_ptr(new FrameMetadata);
+                    std::memcpy(static_cast<unsigned char *>(region->get_address()), metadata_ptr, sizeof(FrameMetadata));
+                }
+            }
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
             metadata->height = video_height_;
             metadata->width = video_width_;
             metadata->time_stamp = time_stamp;
             metadata->write_time = high_resolution_clock::now();
+            metadata->mutex.unlock_upgradable();
         }
     };
 } // namespace shm_video_trans
