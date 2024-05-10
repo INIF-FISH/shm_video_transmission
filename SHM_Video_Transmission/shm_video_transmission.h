@@ -16,6 +16,7 @@ namespace shm_video_trans
 
     struct FrameMetadata
     {
+        std::chrono::high_resolution_clock::time_point time_stamp;
         std::chrono::high_resolution_clock::time_point write_time;
         bool is_consumed = false;
     };
@@ -52,7 +53,7 @@ namespace shm_video_trans
 
         bool receive(FrameBag &out)
         {
-            FrameMetadata *metadata = static_cast<FrameMetadata *>(region->get_address() + video_size_);
+            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(static_cast<unsigned char *>(region->get_address()) + video_size_);
             if (metadata->is_consumed)
                 return false;
             auto write_time = metadata->write_time;
@@ -89,12 +90,13 @@ namespace shm_video_trans
             shm_obj->remove(channel_name_.c_str());
         }
 
-        void send(Mat &frame)
+        void send(Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = high_resolution_clock::now())
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 resize(frame, frame, Size(video_width_, video_height_));
             std::memcpy(region->get_address(), frame.data, video_size_);
-            FrameMetadata *metadata = static_cast<FrameMetadata *>(region->get_address() + video_size_);
+            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(static_cast<unsigned char *>(region->get_address()) + video_size_);
+            metadata->time_stamp = time_stamp;
             metadata->write_time = high_resolution_clock::now();
             metadata->is_consumed = false;
         }
