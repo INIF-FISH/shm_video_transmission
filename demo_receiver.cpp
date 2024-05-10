@@ -1,4 +1,5 @@
 #include "./SHM_Video_Transmission/shm_video_transmission.h"
+#include <thread>
 
 int main(int argc, char *argv[])
 {
@@ -14,6 +15,11 @@ int main(int argc, char *argv[])
 
     // Create a VideoReceiver object
     shm_video_trans::VideoReceiver receiver(channelName);
+
+    while (!receiver.init())
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
     // Create a window to display the received video
     cv::namedWindow("Received Video", cv::WINDOW_AUTOSIZE);

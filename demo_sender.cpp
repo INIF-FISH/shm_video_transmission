@@ -1,5 +1,22 @@
 #include "./SHM_Video_Transmission/shm_video_transmission.h"
 #include <thread>
+#include <csignal>
+
+bool terminate_flag = false;
+
+void signalHandler(int signum)
+{
+    switch (signum)
+    {
+    case SIGALRM:
+        break;
+    case SIGINT:
+        terminate_flag = true;
+        break;
+    default:
+        break;
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -31,7 +48,7 @@ int main(int argc, char *argv[])
     int wait_nanoseconds = std::round(1000000000.f / fps);
 
     cv::Mat frame;
-    while (true)
+    while (!terminate_flag)
     {
         // Loop back to the beginning of the video file when reaching the end
         if (cap.get(cv::CAP_PROP_POS_FRAMES) == cap.get(cv::CAP_PROP_FRAME_COUNT))

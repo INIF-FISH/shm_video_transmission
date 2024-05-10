@@ -20,7 +20,7 @@ namespace shm_video_trans
         interprocess_upgradable_mutex mutex;
         high_resolution_clock::time_point time_stamp;
         high_resolution_clock::time_point write_time;
-        int width, height;
+        int width = 0, height = 0;
     };
 
     struct FrameBag
@@ -42,21 +42,35 @@ namespace shm_video_trans
         VideoReceiver(std::string channel_name)
         {
             channel_name_ = channel_name;
-            shm_obj = std::make_shared<shared_memory_object>(open_only, channel_name_.c_str(), read_write);
-            region = std::make_shared<mapped_region>(*shm_obj, read_write);
+            init();
         }
 
         ~VideoReceiver()
         {
-            FrameMetadata *metadata_ptr(new FrameMetadata);
-            std::memcpy(static_cast<unsigned char *>(region->get_address()), metadata_ptr, sizeof(FrameMetadata));
+        }
+
+        bool init()
+        {
+            try
+            {
+                shm_obj = std::make_shared<shared_memory_object>(open_only, channel_name_.c_str(), read_write);
+            }
+            catch (const std::exception &e)
+            {
+                shm_obj = nullptr;
+                return false;
+            }
+            region = std::make_shared<mapped_region>(*shm_obj, read_write);
+            return true;
         }
 
         bool receive(FrameBag &out)
         {
+            if (!(shm_obj && region))
+                return false;
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
             sharable_lock<interprocess_upgradable_mutex> lock(metadata->mutex);
-            if (metadata->write_time <= last_receive_time)
+            if (metadata->write_time <= last_receive_time || metadata->height == 0 || metadata->width == 0)
                 return false;
             out.frame = cv::Mat(metadata->height, metadata->width, CV_8UC3, static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata));
             out.time_stamp = metadata->time_stamp;
@@ -89,6 +103,11 @@ namespace shm_video_trans
         }
 
         ~VideoSender()
+        {
+            release_channel();
+        }
+
+        void release_channel()
         {
             shm_obj->remove(channel_name_.c_str());
         }
