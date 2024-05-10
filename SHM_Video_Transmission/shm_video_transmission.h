@@ -24,7 +24,7 @@ namespace shm_video_trans
     struct FrameBag
     {
         FrameMetadata meta;
-        Mat frame;
+        cv::Mat frame;
     };
 
     class VideoReceiver
@@ -57,8 +57,7 @@ namespace shm_video_trans
             if (metadata->is_consumed)
                 return false;
             auto write_time = metadata->write_time;
-            out.frame = Mat(video_height_, video_width_, CV_8UC3);
-            std::memcpy(out.frame.data, region->get_address(), video_size_);
+            out.frame = cv::Mat(video_height_, video_width_, CV_8UC3, static_cast<unsigned char *>(region->get_address()));
             out.meta = *metadata;
             metadata->is_consumed = true;
             return true;
@@ -90,10 +89,10 @@ namespace shm_video_trans
             shm_obj->remove(channel_name_.c_str());
         }
 
-        void send(Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
+        void send(cv::Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
-                resize(frame, frame, Size(video_width_, video_height_));
+                cv::resize(frame, frame, cv::Size(video_width_, video_height_));
             std::memcpy(region->get_address(), frame.data, video_size_);
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(static_cast<unsigned char *>(region->get_address()) + video_size_);
             metadata->time_stamp = time_stamp;
