@@ -90,7 +90,7 @@ namespace shm_video_trans
             shm_obj->remove(channel_name_.c_str());
         }
 
-        void send(Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = high_resolution_clock::now())
+        void send(Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 resize(frame, frame, Size(video_width_, video_height_));
