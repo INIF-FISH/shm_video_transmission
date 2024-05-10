@@ -48,7 +48,6 @@ namespace shm_video_trans
 
         ~VideoReceiver()
         {
-            shm_obj->remove(channel_name_.c_str());
         }
 
         bool receive(FrameBag &out)
