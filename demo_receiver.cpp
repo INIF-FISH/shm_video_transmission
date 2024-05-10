@@ -26,17 +26,21 @@ int main(int argc, char *argv[])
     int FPS = 0;
     int frame_count = 0;
     unsigned long transmission_latency = 0;
+    unsigned long system_latency = 0;
     unsigned long avg_transmission_latency = 0;
-    cv::namedWindow("Received Video",cv::WindowFlags::WINDOW_NORMAL);
+    unsigned long avg_system_latency = 0;
+    cv::namedWindow("Received Video", cv::WindowFlags::WINDOW_NORMAL);
 
     while (true)
     {
         // Receive a frame
         if (receiver.receive(receivedFrame))
         {
-            auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
+            auto transmission_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
+            auto system_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
             frame_count++;
-            transmission_latency += duration.count();
+            transmission_latency += transmission_duration.count();
+            system_latency += system_duration.count();
             end_time = std::chrono::high_resolution_clock::now();
             auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
             // FPS && Latency
@@ -44,12 +48,15 @@ int main(int argc, char *argv[])
             {
                 FPS = frame_count;
                 avg_transmission_latency = transmission_latency / frame_count;
+                avg_system_latency = system_latency / frame_count;
                 frame_count = 0;
                 transmission_latency = 0;
+                system_latency = 0;
                 start_time = std::chrono::high_resolution_clock::now();
             }
-            cv::putText(receivedFrame.frame, "FPS: " + std::to_string(FPS), cv::Point(10, 15), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
-            cv::putText(receivedFrame.frame, "Latency(ns): " + std::to_string(avg_transmission_latency), cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
+            cv::putText(receivedFrame.frame, "FPS              : " + std::to_string(FPS), cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
+            cv::putText(receivedFrame.frame, "TransLatency(ns) : " + std::to_string(avg_transmission_latency), cv::Point(10, 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
+            cv::putText(receivedFrame.frame, "SysLatency(ns)   : " + std::to_string(avg_system_latency), cv::Point(10, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
             // Display the received frame
             cv::imshow("Received Video", receivedFrame.frame);
 

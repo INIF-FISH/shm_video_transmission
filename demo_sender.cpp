@@ -37,13 +37,15 @@ int main(int argc, char *argv[])
         if (cap.get(cv::CAP_PROP_POS_FRAMES) == cap.get(cv::CAP_PROP_FRAME_COUNT))
             cap.set(cv::CAP_PROP_POS_FRAMES, 0);
 
+        std::chrono::_V2::system_clock::time_point collect_time = std::chrono::_V2::system_clock::now();
         // Capture a frame from the video file
         cap >> frame;
+
         if (frame.empty())
             continue;
 
         // Send the frame
-        sender.send(frame);
+        sender.send(frame, collect_time);
 
         // wait for a while
         std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
