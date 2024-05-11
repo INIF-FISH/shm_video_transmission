@@ -31,9 +31,9 @@ namespace shm_video_trans
         high_resolution_clock::time_point write_time;
         Mat frame;
         FrameBag() {}
-        FrameBag(high_resolution_clock::time_point &time_stamp_, high_resolution_clock::time_point &write_time_)
+        FrameBag(high_resolution_clock::time_point time_stamp_, high_resolution_clock::time_point write_time_)
             : time_stamp(time_stamp_), write_time(write_time_) {}
-        FrameBag(high_resolution_clock::time_point &time_stamp_, high_resolution_clock::time_point &write_time_, Mat frame_)
+        FrameBag(high_resolution_clock::time_point time_stamp_, high_resolution_clock::time_point write_time_, Mat frame_)
             : time_stamp(time_stamp_), write_time(write_time_), frame(frame_) {}
     };
 
