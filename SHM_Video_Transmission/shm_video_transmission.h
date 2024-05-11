@@ -5,9 +5,8 @@
 #include <opencv2/opencv.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <chrono>
 
@@ -19,7 +18,7 @@ namespace shm_video_trans
 
     struct FrameMetadata
     {
-        interprocess_upgradable_mutex mutex;
+        interprocess_sharable_mutex mutex;
         high_resolution_clock::time_point time_stamp;
         high_resolution_clock::time_point write_time;
         int width = 0, height = 0;
@@ -47,6 +46,7 @@ namespace shm_video_trans
         std::shared_ptr<mapped_region> region;
         high_resolution_clock::time_point last_receive_time = high_resolution_clock::time_point();
         FrameBag frame;
+        FrameMetadata *metadata;
 
     public:
         VideoReceiver(std::string channel_name)
@@ -71,7 +71,7 @@ namespace shm_video_trans
                 return false;
             }
             region = std::make_shared<mapped_region>(*shm_obj, read_write);
-            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
+            metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
             frame.frame = cv::Mat(metadata->height, metadata->width, CV_8UC3, static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata));
             return true;
         }
@@ -80,9 +80,8 @@ namespace shm_video_trans
         {
             if (!(shm_obj && region))
                 return false;
-            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            sharable_lock<interprocess_upgradable_mutex> lock(metadata->mutex);
-            if (metadata->write_time <= last_receive_time || metadata->height == 0 || metadata->width == 0)
+            sharable_lock<interprocess_sharable_mutex> lock(metadata->mutex);
+            if (!(metadata->write_time > last_receive_time))
                 return false;
             frame.time_stamp = metadata->time_stamp;
             frame.write_time = metadata->write_time;
@@ -103,13 +102,11 @@ namespace shm_video_trans
 
         void lock()
         {
-            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
             metadata->mutex.lock_sharable();
         }
 
         void unlock()
         {
-            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
             metadata->mutex.unlock_sharable();
         }
     };
@@ -121,6 +118,7 @@ namespace shm_video_trans
         std::string channel_name_;
         std::shared_ptr<shared_memory_object> shm_obj;
         std::shared_ptr<mapped_region> region;
+        FrameMetadata *metadata;
         int timeout_period = 1000;
         bool auto_remove = true;
 
@@ -135,6 +133,7 @@ namespace shm_video_trans
             shm_obj->truncate(video_size_ + sizeof(FrameMetadata));
             region = std::make_shared<mapped_region>(*shm_obj, read_write);
             new (region->get_address()) FrameMetadata(video_width_, video_height_);
+            metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
         }
 
         ~VideoSender()
@@ -167,15 +166,13 @@ namespace shm_video_trans
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
-            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
+            
             if (!metadata->mutex.timed_lock(boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(timeout_period)))
             {
                 new (region->get_address()) FrameMetadata(video_width_, video_height_);
                 return;
             }
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
-            metadata->height = video_height_;
-            metadata->width = video_width_;
             metadata->time_stamp = time_stamp;
             metadata->write_time = high_resolution_clock::now();
             metadata->mutex.unlock();

@@ -20,9 +20,9 @@ int main(int argc, char *argv[])
 {
     signal(SIGINT, signalHandler);
     // Check if all required arguments are provided
-    if (argc < 5)
+    if (argc < 6)
     {
-        std::cerr << "Usage: " << argv[0] << " <channelName> <width> <height> <videoFilePath>\n";
+        std::cerr << "Usage: " << argv[0] << " <channelName> <width> <height> <videoFilePath> <realFrameRate>[true|false]\n";
         return 1;
     }
 
@@ -31,6 +31,16 @@ int main(int argc, char *argv[])
     int width = std::stoi(argv[2]);
     int height = std::stoi(argv[3]);
     std::string videoFile = argv[4];
+    bool realFrameRate = false;
+    if (strcmp(argv[5], "true") == 0)
+    {
+        realFrameRate = true;
+    }
+    else if (strcmp(argv[5], "false") != 0)
+    {
+        printf("Invalid argument: %s\n", argv[1]);
+        return 1;
+    }
 
     // Create a VideoSender object
     shm_video_trans::VideoSender sender(channelName, width, height);
@@ -64,7 +74,8 @@ int main(int argc, char *argv[])
         sender.send(frame, collect_time);
 
         // wait for a while
-        std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
+        if (realFrameRate)
+            std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
     }
 
     return 0;

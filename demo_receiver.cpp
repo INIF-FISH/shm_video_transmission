@@ -42,10 +42,11 @@ int main(int argc, char *argv[])
         // Receive a frame
         if (receiver.receive())
         {
+            auto now_time = std::chrono::high_resolution_clock::now();
             receiver.lock();
             receivedFrame = receiver.toCvShare();
-            auto transmission_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
-            auto system_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.time_stamp);
+            auto transmission_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(now_time - receivedFrame.write_time);
+            auto system_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(now_time - receivedFrame.time_stamp);
             frame_count++;
             transmission_latency += transmission_duration.count();
             system_latency += system_duration.count();
@@ -55,8 +56,8 @@ int main(int argc, char *argv[])
             if (elapsed_seconds >= 1)
             {
                 FPS = frame_count;
-                avg_transmission_latency = transmission_latency / frame_count;
-                avg_system_latency = system_latency / frame_count;
+                avg_transmission_latency = std::floor(double(transmission_latency) / double(frame_count));
+                avg_system_latency = std::floor(double(system_latency) / double(frame_count));
                 frame_count = 0;
                 transmission_latency = 0;
                 system_latency = 0;
