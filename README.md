@@ -40,7 +40,7 @@ make
 ### Demo发送者
 
 ```
-./sender <channelName> <width> <height> <videoFilePath>
+./sender <channelName> <width> <height> <videoFilePath> <realFrameRate>[true|false]
 ```
 
 ### Demo接收者
