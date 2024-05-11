@@ -166,12 +166,32 @@ namespace shm_video_trans
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
-            
             if (!metadata->mutex.timed_lock(boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(timeout_period)))
             {
                 new (region->get_address()) FrameMetadata(video_width_, video_height_);
                 return;
             }
+            std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
+            metadata->time_stamp = time_stamp;
+            metadata->write_time = high_resolution_clock::now();
+            metadata->mutex.unlock();
+        }
+
+        void sendInUnsafeMode(cv::Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
+        {
+            if (frame.cols != video_width_ || frame.rows != video_height_)
+                cv::resize(frame, frame, cv::Size(video_width_, video_height_));
+            std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
+            metadata->time_stamp = time_stamp;
+            metadata->write_time = high_resolution_clock::now();
+        }
+
+        void sendInReceiverFirstMode(cv::Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
+        {
+            if (frame.cols != video_width_ || frame.rows != video_height_)
+                cv::resize(frame, frame, cv::Size(video_width_, video_height_));
+            if (!metadata->mutex.try_lock())
+                return;
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
             metadata->time_stamp = time_stamp;
             metadata->write_time = high_resolution_clock::now();

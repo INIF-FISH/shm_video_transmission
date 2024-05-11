@@ -1,5 +1,6 @@
 #include "./SHM_Video_Transmission/shm_video_transmission.h"
 #include <thread>
+#include <iomanip> // For std::fixed and std::setprecision
 
 int main(int argc, char *argv[])
 {
@@ -29,7 +30,7 @@ int main(int argc, char *argv[])
 
     auto start_time = std::chrono::high_resolution_clock::now();
     auto end_time = std::chrono::high_resolution_clock::now();
-    int FPS = 0;
+    double FPS = 0.0; // Change to double for precision
     int frame_count = 0;
     unsigned long transmission_latency = 0;
     unsigned long system_latency = 0;
@@ -51,13 +52,13 @@ int main(int argc, char *argv[])
             transmission_latency += transmission_duration.count();
             system_latency += system_duration.count();
             end_time = std::chrono::high_resolution_clock::now();
-            auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
+            auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
             // FPS && Latency
-            if (elapsed_seconds >= 1)
+            if (elapsed_milliseconds >= 1000)
             {
-                FPS = frame_count;
-                avg_transmission_latency = std::floor(double(transmission_latency) / double(frame_count));
-                avg_system_latency = std::floor(double(system_latency) / double(frame_count));
+                FPS = static_cast<double>(frame_count * 1000) / static_cast<double>(elapsed_milliseconds);
+                avg_transmission_latency = transmission_latency / frame_count;
+                avg_system_latency = system_latency / frame_count;
                 frame_count = 0;
                 transmission_latency = 0;
                 system_latency = 0;

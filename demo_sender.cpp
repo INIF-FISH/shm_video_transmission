@@ -1,6 +1,7 @@
 #include "./SHM_Video_Transmission/shm_video_transmission.h"
 #include <thread>
 #include <csignal>
+#include <chrono>
 
 bool terminate_flag = false;
 
@@ -63,7 +64,7 @@ int main(int argc, char *argv[])
         if (cap.get(cv::CAP_PROP_POS_FRAMES) == cap.get(cv::CAP_PROP_FRAME_COUNT))
             cap.set(cv::CAP_PROP_POS_FRAMES, 0);
 
-        std::chrono::_V2::system_clock::time_point collect_time = std::chrono::_V2::system_clock::now();
+        std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
         // Capture a frame from the video file
         cap >> frame;
 
@@ -71,11 +72,16 @@ int main(int argc, char *argv[])
             continue;
 
         // Send the frame
-        sender.send(frame, collect_time);
+        sender.send(frame, start_time);
 
-        // wait for a while
-        if (realFrameRate)
-            std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
+        // Calculate time taken for this iteration
+        auto end_time = std::chrono::system_clock::now();
+        auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
+
+        // Calculate the remaining time to wait
+        long long remaining_time = wait_nanoseconds - elapsed_time;
+        if (remaining_time > 0 && realFrameRate)
+            std::this_thread::sleep_for(std::chrono::nanoseconds(remaining_time));
     }
 
     return 0;
