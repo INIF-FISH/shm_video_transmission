@@ -116,6 +116,8 @@ namespace shm_video_trans
         std::string channel_name_;
         std::shared_ptr<shared_memory_object> shm_obj;
         std::shared_ptr<mapped_region> region;
+        int timeout_period = 1000;
+        bool auto_remove = true;
 
     public:
         VideoSender(std::string channel_name, const int video_width, const int video_height)
@@ -133,7 +135,23 @@ namespace shm_video_trans
 
         ~VideoSender()
         {
-            release_channel();
+            if (auto_remove)
+                release_channel();
+        }
+
+        void disableAutoRemove()
+        {
+            auto_remove = false;
+        }
+
+        void enableAutoRemove()
+        {
+            auto_remove = true;
+        }
+
+        void setTimeoutPeriod(int t)
+        {
+            timeout_period = t;
         }
 
         void release_channel()
@@ -151,7 +169,7 @@ namespace shm_video_trans
             while (!metadata->mutex.try_lock_upgradable())
             {
                 wait_end_time = std::chrono::high_resolution_clock::now();
-                if (std::chrono::duration_cast<std::chrono::seconds>(wait_end_time - wait_start_time).count() > 1)
+                if (std::chrono::duration_cast<std::chrono::milliseconds>(wait_end_time - wait_start_time).count() > timeout_period)
                 {
                     FrameMetadata *metadata_ptr(new FrameMetadata);
                     std::memcpy(static_cast<unsigned char *>(region->get_address()), metadata_ptr, sizeof(FrameMetadata));
