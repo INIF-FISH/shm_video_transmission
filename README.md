@@ -92,7 +92,7 @@ while(...)
 	{
 		receiver.lock(); // 为资源上锁防止写入覆盖
 		receivedFrame = receiver.toCvShare(); // 零拷贝方式接收
-		receivedFrame = receiver.toCvShare(); // 【可选】 拷贝式接收
+		receivedFrame = receiver.toCvCopy(); // 【可选】 拷贝式接收
 		...
 		// 对资源进行一些操作
 		...
