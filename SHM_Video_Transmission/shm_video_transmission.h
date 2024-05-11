@@ -7,6 +7,8 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <chrono>
 
 namespace shm_video_trans
@@ -99,13 +101,13 @@ namespace shm_video_trans
         void lock()
         {
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            metadata->mutex.lock_sharable();
+            metadata->mutex.lock_upgradable();
         }
 
         void unlock()
         {
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            metadata->mutex.unlock_sharable();
+            metadata->mutex.unlock_upgradable();
         }
     };
 
@@ -164,16 +166,10 @@ namespace shm_video_trans
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            std::chrono::high_resolution_clock::time_point wait_start_time = std::chrono::high_resolution_clock::now();
-            std::chrono::high_resolution_clock::time_point wait_end_time;
-            while (!metadata->mutex.try_lock_upgradable())
+            if (!metadata->mutex.timed_lock_upgradable(boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(timeout_period)))
             {
-                wait_end_time = std::chrono::high_resolution_clock::now();
-                if (std::chrono::duration_cast<std::chrono::milliseconds>(wait_end_time - wait_start_time).count() > timeout_period)
-                {
-                    FrameMetadata *metadata_ptr(new FrameMetadata);
-                    std::memcpy(static_cast<unsigned char *>(region->get_address()), metadata_ptr, sizeof(FrameMetadata));
-                }
+                new (region->get_address()) FrameMetadata();
+                return;
             }
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
             metadata->height = video_height_;
