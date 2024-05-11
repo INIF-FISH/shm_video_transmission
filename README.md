@@ -12,6 +12,10 @@
 
 【!】同一Channel下如果发送者关闭，所有接收者需要重新打开
 
+【!】sender写入超时时间为1s，超时后将重置进程锁，receiver需要在超时后重新打开
+
+【!】Share模式下receiver对图像的修改会同步至其他receiver，Copy模式下不影响但会增加延迟
+
 ## 使用
 
 ### 依赖
@@ -42,3 +46,5 @@ make
 ```
 ./receiver <channelName>
 ```
+
+## 开发

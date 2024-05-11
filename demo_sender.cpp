@@ -8,8 +8,6 @@ void signalHandler(int signum)
 {
     switch (signum)
     {
-    case SIGALRM:
-        break;
     case SIGINT:
         terminate_flag = true;
         break;
@@ -20,6 +18,7 @@ void signalHandler(int signum)
 
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, signalHandler);
     // Check if all required arguments are provided
     if (argc < 5)
     {

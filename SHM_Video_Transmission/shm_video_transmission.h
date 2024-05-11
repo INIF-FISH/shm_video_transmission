@@ -27,7 +27,12 @@ namespace shm_video_trans
     {
         high_resolution_clock::time_point time_stamp;
         high_resolution_clock::time_point write_time;
-        cv::Mat frame;
+        Mat frame;
+        FrameBag() {}
+        FrameBag(high_resolution_clock::time_point &time_stamp_, high_resolution_clock::time_point &write_time_)
+            : time_stamp(time_stamp_), write_time(write_time_) {}
+        FrameBag(high_resolution_clock::time_point &time_stamp_, high_resolution_clock::time_point &write_time_, Mat frame_)
+            : time_stamp(time_stamp_), write_time(write_time_), frame(frame_) {}
     };
 
     class VideoReceiver
@@ -37,6 +42,7 @@ namespace shm_video_trans
         std::shared_ptr<shared_memory_object> shm_obj;
         std::shared_ptr<mapped_region> region;
         high_resolution_clock::time_point last_receive_time = high_resolution_clock::time_point();
+        FrameBag frame;
 
     public:
         VideoReceiver(std::string channel_name)
@@ -64,7 +70,7 @@ namespace shm_video_trans
             return true;
         }
 
-        bool receive(FrameBag &out)
+        bool receive()
         {
             if (!(shm_obj && region))
                 return false;
@@ -72,11 +78,34 @@ namespace shm_video_trans
             sharable_lock<interprocess_upgradable_mutex> lock(metadata->mutex);
             if (metadata->write_time <= last_receive_time || metadata->height == 0 || metadata->width == 0)
                 return false;
-            out.frame = cv::Mat(metadata->height, metadata->width, CV_8UC3, static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata));
-            out.time_stamp = metadata->time_stamp;
-            out.write_time = metadata->write_time;
+            frame.frame = cv::Mat(metadata->height, metadata->width, CV_8UC3, static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata));
+            frame.time_stamp = metadata->time_stamp;
+            frame.write_time = metadata->write_time;
             last_receive_time = metadata->write_time;
             return true;
+        }
+
+        FrameBag toCvCopy()
+        {
+            FrameBag out(frame.time_stamp, frame.write_time, frame.frame.clone());
+            return out;
+        }
+
+        FrameBag &toCvShare()
+        {
+            return frame;
+        }
+
+        void lock()
+        {
+            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
+            metadata->mutex.lock_sharable();
+        }
+
+        void unlock()
+        {
+            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
+            metadata->mutex.unlock_sharable();
         }
     };
 

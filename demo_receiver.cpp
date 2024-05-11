@@ -40,8 +40,10 @@ int main(int argc, char *argv[])
     while (true)
     {
         // Receive a frame
-        if (receiver.receive(receivedFrame))
+        if (receiver.receive())
         {
+            receiver.lock();
+            receivedFrame = receiver.toCvShare();
             auto transmission_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.write_time);
             auto system_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - receivedFrame.time_stamp);
             frame_count++;
@@ -65,6 +67,7 @@ int main(int argc, char *argv[])
             cv::putText(receivedFrame.frame, "SysLatency(ns)   : " + std::to_string(avg_system_latency), cv::Point(10, 60), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
             // Display the received frame
             cv::imshow("Received Video", receivedFrame.frame);
+            receiver.unlock();
 
             // Press 'ESC' to quit
             if (cv::waitKey(1) == 27)
