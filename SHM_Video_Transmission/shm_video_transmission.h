@@ -104,13 +104,13 @@ namespace shm_video_trans
         void lock()
         {
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            metadata->mutex.lock_upgradable();
+            metadata->mutex.lock_sharable();
         }
 
         void unlock()
         {
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            metadata->mutex.unlock_upgradable();
+            metadata->mutex.unlock_sharable();
         }
     };
 
@@ -168,7 +168,7 @@ namespace shm_video_trans
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
-            if (!metadata->mutex.timed_lock_upgradable(boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(timeout_period)))
+            if (!metadata->mutex.timed_lock(boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(timeout_period)))
             {
                 new (region->get_address()) FrameMetadata(video_width_, video_height_);
                 return;
@@ -178,7 +178,7 @@ namespace shm_video_trans
             metadata->width = video_width_;
             metadata->time_stamp = time_stamp;
             metadata->write_time = high_resolution_clock::now();
-            metadata->mutex.unlock_upgradable();
+            metadata->mutex.unlock();
         }
     };
 } // namespace shm_video_trans
