@@ -23,6 +23,8 @@ namespace shm_video_trans
         high_resolution_clock::time_point time_stamp;
         high_resolution_clock::time_point write_time;
         int width = 0, height = 0;
+        FrameMetadata() {}
+        FrameMetadata(int width_, int height_) : width(width_), height(height_) {}
     };
 
     struct FrameBag
@@ -132,8 +134,7 @@ namespace shm_video_trans
             shm_obj = std::make_shared<shared_memory_object>(open_or_create, channel_name_.c_str(), read_write);
             shm_obj->truncate(video_size_ + sizeof(FrameMetadata));
             region = std::make_shared<mapped_region>(*shm_obj, read_write);
-            FrameMetadata *metadata_ptr(new FrameMetadata);
-            std::memcpy(static_cast<unsigned char *>(region->get_address()), metadata_ptr, sizeof(FrameMetadata));
+            new (region->get_address()) FrameMetadata(video_width_, video_height_);
         }
 
         ~VideoSender()
@@ -169,7 +170,7 @@ namespace shm_video_trans
             FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
             if (!metadata->mutex.timed_lock_upgradable(boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(timeout_period)))
             {
-                new (region->get_address()) FrameMetadata();
+                new (region->get_address()) FrameMetadata(video_width_, video_height_);
                 return;
             }
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
