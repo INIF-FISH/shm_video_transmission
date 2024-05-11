@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         sender.send(frame, collect_time);
 
         // wait for a while
-        // std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(wait_nanoseconds));
     }
 
     return 0;

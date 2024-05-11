@@ -69,6 +69,8 @@ namespace shm_video_trans
                 return false;
             }
             region = std::make_shared<mapped_region>(*shm_obj, read_write);
+            FrameMetadata *metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
+            frame.frame = cv::Mat(metadata->height, metadata->width, CV_8UC3, static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata));
             return true;
         }
 
@@ -80,7 +82,6 @@ namespace shm_video_trans
             sharable_lock<interprocess_upgradable_mutex> lock(metadata->mutex);
             if (metadata->write_time <= last_receive_time || metadata->height == 0 || metadata->width == 0)
                 return false;
-            frame.frame = cv::Mat(metadata->height, metadata->width, CV_8UC3, static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata));
             frame.time_stamp = metadata->time_stamp;
             frame.write_time = metadata->write_time;
             last_receive_time = metadata->write_time;
