@@ -49,7 +49,7 @@ namespace shm_video_trans
         FrameMetadata *metadata;
 
     public:
-        VideoReceiver(std::string channel_name) : channel_name_ (channel_name)
+        VideoReceiver(std::string channel_name) : channel_name_(channel_name)
         {
             init();
         }
@@ -120,6 +120,7 @@ namespace shm_video_trans
         FrameMetadata *metadata;
         int timeout_period = 1000;
         bool auto_remove = true;
+        unsigned char *frame_addres;
 
     public:
         VideoSender(std::string channel_name, const int video_width, const int video_height)
@@ -133,6 +134,7 @@ namespace shm_video_trans
             region = std::make_shared<mapped_region>(*shm_obj, read_write);
             new (region->get_address()) FrameMetadata(video_width_, video_height_);
             metadata = reinterpret_cast<FrameMetadata *>(region->get_address());
+            frame_addres = static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata);
         }
 
         ~VideoSender()
@@ -170,7 +172,7 @@ namespace shm_video_trans
                 new (region->get_address()) FrameMetadata(video_width_, video_height_);
                 return;
             }
-            std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
+            std::memcpy(frame_addres, frame.data, video_size_);
             metadata->time_stamp = time_stamp;
             metadata->write_time = steady_clock::now();
             metadata->mutex.unlock();
@@ -180,7 +182,7 @@ namespace shm_video_trans
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
-            std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
+            std::memcpy(frame_addres, frame.data, video_size_);
             metadata->time_stamp = time_stamp;
             metadata->write_time = steady_clock::now();
         }
@@ -191,7 +193,7 @@ namespace shm_video_trans
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
             if (!metadata->mutex.try_lock())
                 return;
-            std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
+            std::memcpy(frame_addres, frame.data, video_size_);
             metadata->time_stamp = time_stamp;
             metadata->write_time = steady_clock::now();
             metadata->mutex.unlock();
