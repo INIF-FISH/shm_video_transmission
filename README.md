@@ -110,8 +110,8 @@ while(...)
 ```
 struct FrameBag
 {
-        high_resolution_clock::time_point time_stamp; // 用户写入图像采集时间
-        high_resolution_clock::time_point write_time; // 发送者写入图像实际发送时间
+        steady_clock::time_point time_stamp; // 用户写入图像采集时间
+        steady_clock::time_point write_time; // 发送者写入图像实际发送时间
         Mat frame; // 图像数据
 };
 ```

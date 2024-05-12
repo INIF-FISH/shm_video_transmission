@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         if (cap.get(cv::CAP_PROP_POS_FRAMES) == cap.get(cv::CAP_PROP_FRAME_COUNT))
             cap.set(cv::CAP_PROP_POS_FRAMES, 0);
 
-        std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
+        std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
         // Capture a frame from the video file
         cap >> frame;
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         sender.send(frame, start_time);
 
         // Calculate time taken for this iteration
-        auto end_time = std::chrono::system_clock::now();
+        auto end_time = std::chrono::steady_clock::now();
         auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
 
         // Calculate the remaining time to wait

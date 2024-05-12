@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     // Create a FrameBag object to hold received frames
     shm_video_trans::FrameBag receivedFrame;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
-    auto end_time = std::chrono::high_resolution_clock::now();
+    auto start_time = std::chrono::steady_clock::now();
+    auto end_time = std::chrono::steady_clock::now();
     double FPS = 0.0; // Change to double for precision
     int frame_count = 0;
     unsigned long transmission_latency = 0;
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
         // Receive a frame
         if (receiver.receive())
         {
-            auto now_time = std::chrono::high_resolution_clock::now();
+            auto now_time = std::chrono::steady_clock::now();
             receiver.lock();
             receivedFrame = receiver.toCvShare();
             auto transmission_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(now_time - receivedFrame.write_time);
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
             frame_count++;
             transmission_latency += transmission_duration.count();
             system_latency += system_duration.count();
-            end_time = std::chrono::high_resolution_clock::now();
+            end_time = std::chrono::steady_clock::now();
             auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
             // FPS && Latency
             if (elapsed_milliseconds >= 1000)
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
                 frame_count = 0;
                 transmission_latency = 0;
                 system_latency = 0;
-                start_time = std::chrono::high_resolution_clock::now();
+                start_time = std::chrono::steady_clock::now();
             }
             cv::putText(receivedFrame.frame, "FPS              : " + std::to_string(FPS), cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);
             cv::putText(receivedFrame.frame, "TransLatency(ns) : " + std::to_string(avg_transmission_latency), cv::Point(10, 40), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 1);

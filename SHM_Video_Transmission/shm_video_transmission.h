@@ -19,8 +19,8 @@ namespace shm_video_trans
     struct FrameMetadata
     {
         interprocess_sharable_mutex mutex;
-        high_resolution_clock::time_point time_stamp;
-        high_resolution_clock::time_point write_time;
+        steady_clock::time_point time_stamp;
+        steady_clock::time_point write_time;
         int width = 0, height = 0;
         FrameMetadata() {}
         FrameMetadata(int width_, int height_) : width(width_), height(height_) {}
@@ -28,30 +28,29 @@ namespace shm_video_trans
 
     struct FrameBag
     {
-        high_resolution_clock::time_point time_stamp;
-        high_resolution_clock::time_point write_time;
+        steady_clock::time_point time_stamp;
+        steady_clock::time_point write_time;
         Mat frame;
         FrameBag() {}
-        FrameBag(high_resolution_clock::time_point time_stamp_, high_resolution_clock::time_point write_time_)
+        FrameBag(steady_clock::time_point time_stamp_, steady_clock::time_point write_time_)
             : time_stamp(time_stamp_), write_time(write_time_) {}
-        FrameBag(high_resolution_clock::time_point time_stamp_, high_resolution_clock::time_point write_time_, Mat frame_)
+        FrameBag(steady_clock::time_point time_stamp_, steady_clock::time_point write_time_, Mat frame_)
             : time_stamp(time_stamp_), write_time(write_time_), frame(frame_) {}
     };
 
     class VideoReceiver
     {
     private:
-        std::string channel_name_;
+        const std::string channel_name_;
         std::shared_ptr<shared_memory_object> shm_obj;
         std::shared_ptr<mapped_region> region;
-        high_resolution_clock::time_point last_receive_time = high_resolution_clock::time_point();
+        steady_clock::time_point last_receive_time = steady_clock::time_point();
         FrameBag frame;
         FrameMetadata *metadata;
 
     public:
-        VideoReceiver(std::string channel_name)
+        VideoReceiver(std::string channel_name) : channel_name_ (channel_name)
         {
-            channel_name_ = channel_name;
             init();
         }
 
@@ -59,7 +58,7 @@ namespace shm_video_trans
         {
         }
 
-        bool init()
+        inline bool init()
         {
             try
             {
@@ -89,23 +88,23 @@ namespace shm_video_trans
             return true;
         }
 
-        FrameBag toCvCopy()
+        inline FrameBag toCvCopy()
         {
             FrameBag out(frame.time_stamp, frame.write_time, frame.frame.clone());
             return out;
         }
 
-        FrameBag &toCvShare()
+        inline FrameBag &toCvShare()
         {
             return frame;
         }
 
-        void lock()
+        inline void lock()
         {
             metadata->mutex.lock_sharable();
         }
 
-        void unlock()
+        inline void unlock()
         {
             metadata->mutex.unlock_sharable();
         }
@@ -142,27 +141,27 @@ namespace shm_video_trans
                 release_channel();
         }
 
-        void disableAutoRemove()
+        inline void disableAutoRemove()
         {
             auto_remove = false;
         }
 
-        void enableAutoRemove()
+        inline void enableAutoRemove()
         {
             auto_remove = true;
         }
 
-        void setTimeoutPeriod(int t)
+        inline void setTimeoutPeriod(int t)
         {
             timeout_period = t;
         }
 
-        void release_channel()
+        inline void release_channel()
         {
             shm_obj->remove(channel_name_.c_str());
         }
 
-        void send(cv::Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
+        void send(cv::Mat &frame, const std::chrono::steady_clock::time_point time_stamp = std::chrono::steady_clock::time_point())
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
@@ -173,20 +172,20 @@ namespace shm_video_trans
             }
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
             metadata->time_stamp = time_stamp;
-            metadata->write_time = high_resolution_clock::now();
+            metadata->write_time = steady_clock::now();
             metadata->mutex.unlock();
         }
 
-        void sendInUnsafeMode(cv::Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
+        void sendInUnsafeMode(cv::Mat &frame, const std::chrono::steady_clock::time_point time_stamp = std::chrono::steady_clock::time_point())
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
             metadata->time_stamp = time_stamp;
-            metadata->write_time = high_resolution_clock::now();
+            metadata->write_time = steady_clock::now();
         }
 
-        void sendInReceiverFirstMode(cv::Mat &frame, std::chrono::high_resolution_clock::time_point time_stamp = std::chrono::high_resolution_clock::time_point())
+        void sendInReceiverFirstMode(cv::Mat &frame, const std::chrono::steady_clock::time_point time_stamp = std::chrono::steady_clock::time_point())
         {
             if (frame.cols != video_width_ || frame.rows != video_height_)
                 cv::resize(frame, frame, cv::Size(video_width_, video_height_));
@@ -194,7 +193,7 @@ namespace shm_video_trans
                 return;
             std::memcpy(static_cast<unsigned char *>(region->get_address()) + sizeof(FrameMetadata), frame.data, video_size_);
             metadata->time_stamp = time_stamp;
-            metadata->write_time = high_resolution_clock::now();
+            metadata->write_time = steady_clock::now();
             metadata->mutex.unlock();
         }
     };
