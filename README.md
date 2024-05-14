@@ -115,3 +115,13 @@ struct FrameBag
         Mat frame; // 图像数据
 };
 ```
+
+### CMakeLists
+
+```
+...
+find_package(OpenCV REQUIRED)
+find_package(Boost COMPONENTS system filesystem REQUIRED)
+...
+target_link_libraries(... ${OpenCV_LIBS} ${Boost_LIBRARIES} pthread rt)
+```
